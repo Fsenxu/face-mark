@@ -5,11 +5,17 @@ import static com.heqichao.springBootDemo.megprotocol.Utils.CommonFunction.waitM
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -22,11 +28,15 @@ import com.heqichao.springBootDemo.megprotocol.MegDevice;
 import com.heqichao.springBootDemo.megprotocol.MegError;
 import com.heqichao.springBootDemo.megprotocol.MegException;
 import com.heqichao.springBootDemo.megprotocol.MegFaceManager;
+import com.heqichao.springBootDemo.megprotocol.SDKInitUnit;
 import  com.heqichao.springBootDemo.megprotocol.MegCommon;
 import com.heqichao.springBootDemo.megprotocol.MegDeviceStorage;
 import com.heqichao.springBootDemo.megprotocol.MegDeviceAlarm;
 import com.sun.jna.Memory;
+import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
+import com.sun.jna.Structure;
+import com.sun.jna.WString;
 import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
 
@@ -54,48 +64,64 @@ public class SendServiceImpl implements SendService {
     }
     
 	@Override
-    public Map<String,Object> testMeg(){
+    public Map<String,Object> testMeg() throws JSONException{
 		Map<String,Object> map = new HashMap<String,Object>();
-		int conn = sdkInit();
-		try {
-			megDevice = getDevice();
-		} catch (MegException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		map.put("conn", conn);
-		StringBuilder outJsonStr = new StringBuilder();
-
-        int ret = MegDeviceAlarm.subscribeStream(megDevice, outJsonStr, deviceAlarmCb, null, null, null);
-
-        JSONObject outJson = new JSONObject(outJsonStr.toString());
-        int handle = outJson.getInt("handle");
-	    map.put("ret", ret);
-	    map.put("outJson", outJsonStr.toString());
-	    map.put("handle", handle);
-	    
-	    JSONObject inJson = new JSONObject();
-        JSONArray alarmType = new JSONArray();
-        JSONObject alarmTypeItem = new JSONObject();
-        JSONArray minorType = new JSONArray();
-        minorType.put("normal_access_of_staff");
-
-        alarmTypeItem.put("major_type", "access_control");
-        alarmTypeItem.put("minor_type", minorType);
-        alarmType.put(alarmTypeItem);
-
-        inJson.put("alarm_type", alarmType);
-        inJson.put("handle", handle);
-        int ret2 = MegDeviceAlarm.subscribeAlarmType(megDevice, inJson.toString());
-        map.put("ret2", ret2);
-        
+//		int conn = sdkInit();
+//		try {
+//			megDevice = getDevice();
+//		} catch (MegException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		map.put("conn", conn);
+//		StringBuilder outJsonStr = new StringBuilder();
+//		UserStruct user = new UserStruct();
+//		user.id = 1;
+//		user.write();
 //		
+//        int ret = MegDeviceAlarm.subscribeStream(megDevice, outJsonStr, deviceAlarmCb, user.getPointer(), null, null);
+//
+//        JSONObject outJson = new JSONObject(outJsonStr.toString());
+//        int handle = outJson.getInt("handle");
+//	    map.put("ret", ret);
+//	    map.put("outJson", outJsonStr.toString());
+//	    map.put("handle", handle);
+//	    
+//	    JSONObject inJson = new JSONObject();
+//        JSONArray alarmType = new JSONArray();
+//        JSONObject alarmTypeItem = new JSONObject();
+//        JSONArray minorType = new JSONArray();
+//        minorType.put("normal_access_of_staff");
+//        minorType.put("abnormal_access_of_staff");
+//        minorType.put("import_person_try_to_pass");
+//        minorType.put("stranger_try_to_pass");
+//        minorType.put("normal_access_of_visitor");
+//        minorType.put("abnormal_access_of_visitor");
+//        minorType.put("fire_control");
+//        minorType.put("door_always_open");
+//        minorType.put("doorbell_rings");
+//        minorType.put("suspicious_target");
+//        minorType.put("no_wear_respirator");
+//        minorType.put("non_living_attack");
+//        minorType.put("stranger");
+//
+//        alarmTypeItem.put("major_type", "access_control");
+//        alarmTypeItem.put("minor_type", minorType);
+//        alarmType.put(alarmTypeItem);
+//
+//        inJson.put("alarm_type", alarmType);
+//        inJson.put("handle", handle);
+//        int ret2 = MegDeviceAlarm.subscribeAlarmType(megDevice, inJson.toString());
+		SDKInitUnit.sdkInit();
+        map.put("ret2", "ok");
+//        
+////		
 		return map;
 		
     }
 	
 	@Override
-	public Map<String,Object> testGroup(){
+	public Map<String,Object> testGroup() throws Exception{
 		Map<String,Object> map = new HashMap<String,Object>();
 //		StringBuilder outJsonStr = new StringBuilder();
 //		String path = System.getProperty("user.dir");
@@ -190,6 +216,112 @@ public class SendServiceImpl implements SendService {
 		
 		return map;
 		
+	}
+	@Override
+	public Map<String,Object> personAdd(Map map) throws Exception{
+		 Map<String,Object> res = new HashMap<String,Object>();
+		 Date date = new Date();
+		 String picName = date.getTime()+"";
+		String sn = map.remove("sn_code").toString();
+		String type = map.remove("image_type").toString();
+		String pictureUrl = map.remove("image_url").toString();
+		Map personInfo = (Map)map.get("person_info");
+		String pictureCode = personInfo.get("code").toString();
+		String rootPath = System.getProperty("user.dir");
+		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
+		
+        try {
+        	//建立图片连接
+        	URL url = new URL(pictureUrl);
+        	HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        	//设置请求方式
+        	connection.setRequestMethod("GET");
+        	//设置超时时间
+        	connection.setConnectTimeout(10*1000);
+        	//输入流
+        	InputStream stream = connection.getInputStream();
+        	int len = 0;
+        	byte[] test = new byte[1024];
+            FileOutputStream fos;
+            fos = new FileOutputStream(pathFile, true);
+            //以流的方式上传
+            while ((len =stream.read(test)) !=-1){
+                fos.write(test,0,len);
+            }
+          //记得关闭流，不然消耗资源
+            stream.close();
+            fos.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            res.put("status", 502);
+            res.put("type", "add_person");
+            res.put("outPut", "图片下载失败");
+            return res;
+        }
+		StringBuilder outJsonStr = new StringBuilder();
+		List<Map<String,Object>> dataList = new ArrayList<Map<String,Object>>();
+		Map<String,Object> dataMap = new HashMap<String,Object>();
+		Map<String,Object> faceData = new HashMap<String,Object>();
+		
+		
+
+        byte[] data = null;
+        try
+        {
+            data = getContent(pathFile);
+        }
+        catch (IOException e)
+        {
+            log.error("Fail to read file!");
+        }
+        Pointer ptr = new Memory(data.length);
+        ptr.write(0, data, 0, data.length);
+        log.info("data.length:"+data.length);
+        dataMap.put("data_size", data.length);
+        dataMap.put("image_type", type);
+        dataMap.put("img_name", pictureCode+"addperson");
+        dataList.add(dataMap);
+        faceData.put("data", dataList);
+        faceData.put("data_type", 0);
+        faceData.put("save_image", true);
+        faceData.put("feature_version", "abc");
+        map.put("face_data", faceData);
+        
+
+
+//        String inStr = "{"
+//        + "\"person_id\" : \"333454566\","
+//        + "\"person_info\"       : { \"name\": \"test_name\", \"code\": \"4543667787\", \"type\": \"staff\"},"
+//        + "\"enable_face_filter\": false,"
+//        + "\"face_data\": {\"data_type\":0, " +
+//        "\"save_image\":true, " +
+//        "\"feature_version\": \"abc\", " +
+//        "\"data\":[{\"data_size\":" + data.length + ",\"image_type\": \"jpg\",\"img_name\":\"img_name_addperson\"}]},"
+//        + "\"groups\"   : [{\"group_id\": \"627b7f877490411aad1f31a94e82c205\"}]"
+//        + "}";
+
+        MegFaceManager.BinDataStruct.ByValue binData = new MegFaceManager.BinDataStruct.ByValue();
+        MegFaceManager.BinDataStruct.ByValue binData1 = new MegFaceManager.BinDataStruct.ByValue();
+        MegFaceManager.BinDataStruct.ByValue binData2 = new MegFaceManager.BinDataStruct.ByValue();
+
+        MegFaceManager.PersonFaceStruct personFaces = new MegFaceManager.PersonFaceStruct();
+        personFaces.faces[0] = binData;
+        personFaces.faces[0].data_size = data.length;
+        personFaces.faces[0].data = ptr;
+        personFaces.faces[1] = binData1;
+        personFaces.faces[1].data_size = 0;
+        personFaces.faces[1].data = null;
+        personFaces.faces[2] = binData2;
+        personFaces.faces[2].data_size = 0;
+        personFaces.faces[2].data = null;
+
+        int ret = MegFaceManager.addPerson(SDKInitUnit.getDevice(), new JSONObject(map).toString(), personFaces, outJsonStr);
+        
+		res.put("status", ret);
+        res.put("type", "add_person");
+        res.put("outPut", outJsonStr.toString());
+        return res;
+        
 	}
     
     private static String g_url = "tcp://10.235.102.29:9090?user=admin&password=admin123";
@@ -288,6 +420,7 @@ public class SendServiceImpl implements SendService {
     private static class MediaDeviceAlarmCb implements MegDeviceAlarm.MediaDeviceAlarmCb {
         @Override
         public void invoke(MegCommon.AlarmMsg.ByReference alarmMsg, Pointer userArg) {
+        	UserStruct user = new UserStruct(userArg);
             byte[] info = alarmMsg.jsonInfo.getByteArray(0, alarmMsg.infoLen);
             String infoStr = new String(info);
             log.info("info: " + infoStr);
@@ -313,5 +446,17 @@ public class SendServiceImpl implements SendService {
                 }
             }
         }
+    }
+    public static class UserStruct extends Structure{
+    	public UserStruct() {
+    		
+    	}
+        public UserStruct(Pointer userArg) {
+			// TODO Auto-generated constructor stub
+		}
+		public int id;
+        public WString name;
+        public int age;
+		
     }
 }

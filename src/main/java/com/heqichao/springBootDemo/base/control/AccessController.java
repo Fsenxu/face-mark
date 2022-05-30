@@ -7,13 +7,14 @@ import com.heqichao.springBootDemo.base.util.StringUtil;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 
 //@RestController == @Controller + @ResponseBody
 @RestController
-@RequestMapping(value = "/service")
+@RequestMapping(value = "/face")
 public class AccessController extends BaseController{
 
 
@@ -30,10 +31,11 @@ public class AccessController extends BaseController{
          return new ResponeResult(res);
     }
     
-    @RequestMapping(value = "/screen/clearAccess")
-    public ResponeResult clearAccess(@RequestBody Map map) throws Exception{
-    	String aId =StringUtil.getStringByMap(map,"aId");
-    	return new ResponeResult();
+    @RequestMapping(value = "/person/add")
+    public ResponeResult personAdd(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.personAdd(map);
+    	
+    	return new ResponeResult(res);
     }
     
     @RequestMapping(value = "/screen/accessOnline")
