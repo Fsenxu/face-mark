@@ -41,6 +41,7 @@ import com.sun.jna.ptr.IntByReference;
 import com.sun.jna.ptr.PointerByReference;
 
 import lombok.extern.slf4j.Slf4j;
+import net.coobird.thumbnailator.Thumbnails;
 
 /**
  * Created by heqichao on 2018-2-12.
@@ -53,9 +54,6 @@ public class SendServiceImpl implements SendService {
     @Autowired
     private SmsUtil smsUtil;
     
-    private static MegDevice megDevice;
-    private MediaDeviceAlarmCb deviceAlarmCb = new MediaDeviceAlarmCb();
-
     //如果配置在类上 则整个类的方法均有事务
     @Transactional
     @Override
@@ -64,58 +62,10 @@ public class SendServiceImpl implements SendService {
     }
     
 	@Override
-    public Map<String,Object> testMeg() throws JSONException{
+    public Map<String,Object> initConnect() throws Exception{
 		Map<String,Object> map = new HashMap<String,Object>();
-//		int conn = sdkInit();
-//		try {
-//			megDevice = getDevice();
-//		} catch (MegException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		map.put("conn", conn);
-//		StringBuilder outJsonStr = new StringBuilder();
-//		UserStruct user = new UserStruct();
-//		user.id = 1;
-//		user.write();
-//		
-//        int ret = MegDeviceAlarm.subscribeStream(megDevice, outJsonStr, deviceAlarmCb, user.getPointer(), null, null);
-//
-//        JSONObject outJson = new JSONObject(outJsonStr.toString());
-//        int handle = outJson.getInt("handle");
-//	    map.put("ret", ret);
-//	    map.put("outJson", outJsonStr.toString());
-//	    map.put("handle", handle);
-//	    
-//	    JSONObject inJson = new JSONObject();
-//        JSONArray alarmType = new JSONArray();
-//        JSONObject alarmTypeItem = new JSONObject();
-//        JSONArray minorType = new JSONArray();
-//        minorType.put("normal_access_of_staff");
-//        minorType.put("abnormal_access_of_staff");
-//        minorType.put("import_person_try_to_pass");
-//        minorType.put("stranger_try_to_pass");
-//        minorType.put("normal_access_of_visitor");
-//        minorType.put("abnormal_access_of_visitor");
-//        minorType.put("fire_control");
-//        minorType.put("door_always_open");
-//        minorType.put("doorbell_rings");
-//        minorType.put("suspicious_target");
-//        minorType.put("no_wear_respirator");
-//        minorType.put("non_living_attack");
-//        minorType.put("stranger");
-//
-//        alarmTypeItem.put("major_type", "access_control");
-//        alarmTypeItem.put("minor_type", minorType);
-//        alarmType.put(alarmTypeItem);
-//
-//        inJson.put("alarm_type", alarmType);
-//        inJson.put("handle", handle);
-//        int ret2 = MegDeviceAlarm.subscribeAlarmType(megDevice, inJson.toString());
-		SDKInitUnit.sdkInit();
-        map.put("ret2", "ok");
-//        
-////		
+		int ret = SDKInitUnit.sdkInit();
+        map.put("status", ret);
 		return map;
 		
     }
@@ -123,58 +73,12 @@ public class SendServiceImpl implements SendService {
 	@Override
 	public Map<String,Object> testGroup() throws Exception{
 		Map<String,Object> map = new HashMap<String,Object>();
-//		StringBuilder outJsonStr = new StringBuilder();
-//		String path = System.getProperty("user.dir");
-//
-//        byte[] data = null;
-//        try
-//        {
-//            data = getContent(path + "/data/staff.jpg");
-//        }
-//        catch (IOException e)
-//        {
-//            log.error("Fail to read file!");
-//        }
-//        Pointer ptr = new Memory(data.length);
-//        ptr.write(0, data, 0, data.length);
-//        log.info("data.length:"+data.length);
-//
-//
-//        String inStr = "{"
-//        + "\"person_id\" : \"333454566\","
-//        + "\"person_info\"       : { \"name\": \"test_name\", \"code\": \"4543667787\", \"type\": \"staff\"},"
-//        + "\"enable_face_filter\": false,"
-//        + "\"face_data\": {\"data_type\":0, " +
-//        "\"save_image\":true, " +
-//        "\"feature_version\": \"abc\", " +
-//        "\"data\":[{\"data_size\":" + data.length + ",\"image_type\": \"jpg\",\"img_name\":\"img_name_addperson\"}]},"
-//        + "\"groups\"   : [{\"group_id\": \"627b7f877490411aad1f31a94e82c205\"}]"
-//        + "}";
-//
-//        MegFaceManager.BinDataStruct.ByValue binData = new MegFaceManager.BinDataStruct.ByValue();
-//        MegFaceManager.BinDataStruct.ByValue binData1 = new MegFaceManager.BinDataStruct.ByValue();
-//        MegFaceManager.BinDataStruct.ByValue binData2 = new MegFaceManager.BinDataStruct.ByValue();
-//
-//        MegFaceManager.PersonFaceStruct personFaces = new MegFaceManager.PersonFaceStruct();
-//        personFaces.faces[0] = binData;
-//        personFaces.faces[0].data_size = data.length;
-//        personFaces.faces[0].data = ptr;
-//        personFaces.faces[1] = binData1;
-//        personFaces.faces[1].data_size = 0;
-//        personFaces.faces[1].data = null;
-//        personFaces.faces[2] = binData2;
-//        personFaces.faces[2].data_size = 0;
-//        personFaces.faces[2].data = null;
-//
-//        int ret = MegFaceManager.addPerson(megDevice, new JSONObject(inStr).toString(), personFaces, outJsonStr);
-//		map.put("testGroup", ret);
-//		map.put("outJsonStr", outJsonStr.toString());
 		StringBuilder outJsonStr = new StringBuilder();
 		JSONObject inJson = new JSONObject();
 		inJson.put("offset", 0);
         inJson.put("size", 10);
         inJson.put("get_feature", false);
-        int ret = MegDeviceAlarm.queryAlarmHistory(megDevice, inJson.toString(), outJsonStr);
+        int ret = MegDeviceAlarm.queryAlarmHistory(SDKInitUnit.getDevice(), inJson.toString(), outJsonStr);
         map.put("ret", ret);
         map.put("outJsonStr", outJsonStr.toString());
         
@@ -196,7 +100,7 @@ public class SendServiceImpl implements SendService {
         inJson.put("image_uri", imagePath);
         IntByReference imgSize = new IntByReference();
         PointerByReference imgData = new PointerByReference();
-        int ret2 = MegDeviceStorage.getImage(megDevice, inJson.toString(), imgSize, imgData);
+        int ret2 = MegDeviceStorage.getImage(SDKInitUnit.getDevice(), inJson.toString(), imgSize, imgData);
         log.debug("getImage img_size: " + imgSize.getValue());
         map.put("ret2", ret2);
         map.put("img_size", imgSize.getValue());
@@ -229,11 +133,14 @@ public class SendServiceImpl implements SendService {
 		String pictureCode = personInfo.get("code").toString();
 		String rootPath = System.getProperty("user.dir");
 		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
+		String pathFile590 = rootPath + "/data/"+picName+"_"+pictureCode+"_590."+type;
 		
         try {
         	//建立图片连接
         	URL url = new URL(pictureUrl);
         	HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        	//设置referer白名单
+        	connection.setRequestProperty("referer","http://39.103.132.160");
         	//设置请求方式
         	connection.setRequestMethod("GET");
         	//设置超时时间
@@ -251,9 +158,11 @@ public class SendServiceImpl implements SendService {
           //记得关闭流，不然消耗资源
             stream.close();
             fos.close();
+            //修改图片尺寸
+            Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
         } catch (IOException e) {
             e.printStackTrace();
-            res.put("status", 502);
+            res.put("status", 504);
             res.put("type", "add_person");
             res.put("outPut", "图片下载失败");
             return res;
@@ -268,7 +177,7 @@ public class SendServiceImpl implements SendService {
         byte[] data = null;
         try
         {
-            data = getContent(pathFile);
+            data = getContent(pathFile590);
         }
         catch (IOException e)
         {
@@ -287,19 +196,6 @@ public class SendServiceImpl implements SendService {
         faceData.put("feature_version", "abc");
         map.put("face_data", faceData);
         
-
-
-//        String inStr = "{"
-//        + "\"person_id\" : \"333454566\","
-//        + "\"person_info\"       : { \"name\": \"test_name\", \"code\": \"4543667787\", \"type\": \"staff\"},"
-//        + "\"enable_face_filter\": false,"
-//        + "\"face_data\": {\"data_type\":0, " +
-//        "\"save_image\":true, " +
-//        "\"feature_version\": \"abc\", " +
-//        "\"data\":[{\"data_size\":" + data.length + ",\"image_type\": \"jpg\",\"img_name\":\"img_name_addperson\"}]},"
-//        + "\"groups\"   : [{\"group_id\": \"627b7f877490411aad1f31a94e82c205\"}]"
-//        + "}";
-
         MegFaceManager.BinDataStruct.ByValue binData = new MegFaceManager.BinDataStruct.ByValue();
         MegFaceManager.BinDataStruct.ByValue binData1 = new MegFaceManager.BinDataStruct.ByValue();
         MegFaceManager.BinDataStruct.ByValue binData2 = new MegFaceManager.BinDataStruct.ByValue();
@@ -324,99 +220,7 @@ public class SendServiceImpl implements SendService {
         
 	}
     
-    private static String g_url = "tcp://10.235.102.29:9090?user=admin&password=admin123";
-    private final static String g_active_svr_url = "tcp://0.0.0.0:8199";
-    private final static int g_need_active_server = 1;
-    private static Boolean sdkInited = false;
-    private static Boolean connected = false;
-
-    public static int sdkInit() {
-        if (sdkInited) {
-            return MegError.ERROR_MULTIPLIE.getCode();
-        }
-
-        log.debug("sdk_version: " + MegConnectLibrary.INSTANTCE.meg_conn_get_sdk_version());
-
-        MegConnectLibrary.MegConnLogParamStruct logparm = new MegConnectLibrary.MegConnLogParamStruct();
-        logparm.enable = 1;
-        logparm.lv = MegConnectLibrary.MEG_LOG_LEVEL_DEBUG;
-        logparm.file_num = 2;
-        logparm.file_size = 12 * 1024 * 1024;
-
-        byte[] log_path = "./".getBytes();
-        byte[] log_prefix = "meg_client".getBytes();
-        System.arraycopy(log_path, 0, logparm.log_path, 0, log_path.length);
-        System.arraycopy(log_prefix, 0, logparm.log_prefix, 0, log_prefix.length);
-        MegConnectLibrary.INSTANTCE.meg_set_log_param(logparm);
-
-        MegConnectLibrary.MegConnInitParamStruct init = new MegConnectLibrary.MegConnInitParamStruct();
-        init.type = MegConnectLibrary.MEG_CONN_INIT_CLIENT;
-        init.need_active_server = g_need_active_server;
-        init.cli_status_cb = (status, url_or_ssid) -> {
-            log.debug("status=" + status + " url=" + url_or_ssid);
-        };
-
-        init.onvif_multicast_ip = null;
-        init.rpc_svr_url = null;
-        init.svr_status_cb = null;
-        init.http_svr_url = null;
-        init.com_free = (p) -> Clibrary.INSTANCE.free(p);
-        init.authority_cb = null;
-
-        if (g_need_active_server == 0)
-        {
-            init.reg_check_cb = null;
-            init.active_svr_url = null;
-        }
-        else
-        {
-            init.active_svr_url = g_active_svr_url;
-            init.reg_check_cb = (url, active_id) -> {
-                log.info("url=" + url + " active_id=" + active_id);
-                connected = true;
-                g_url = url;
-                return 1;
-            };
-        }
-
-        int ret = MegConnectLibrary.INSTANTCE.meg_conn_init(init);
-        log.debug("sdk init ret:" + ret);
-
-        sdkInited = true;
-
-        return ret;
-    }
-
-    public static void sdkUnInit() {
-        if (sdkInited) {
-            MegConnectLibrary.INSTANTCE.meg_conn_logout(g_url);
-            MegConnectLibrary.INSTANTCE.meg_conn_uninit();
-
-            sdkInited = false;
-        }
-    }
-
-    public static MegDevice getDevice() throws MegException {
-        if (g_need_active_server == 0)
-        {
-            MegConnectLibrary.INSTANTCE.meg_conn_login(g_url);
-        }
-        else
-        {
-            while (true)
-            {
-                waitMs(1000);
-
-                if (connected) {
-                    break;
-                }
-            }
-        }
-
-        MegDevice megDevice = new MegDevice(g_url);
-        megDevice.init();
-        return megDevice;
-    }
+    
     private static class MediaDeviceAlarmCb implements MegDeviceAlarm.MediaDeviceAlarmCb {
         @Override
         public void invoke(MegCommon.AlarmMsg.ByReference alarmMsg, Pointer userArg) {

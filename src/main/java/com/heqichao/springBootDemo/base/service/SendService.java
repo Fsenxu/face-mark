@@ -9,7 +9,7 @@ public interface SendService {
 
     void sendSms(String sendUserId,String formUserId ,String context,boolean useQueue);
 
-	Map<String, Object> testMeg();
+	Map<String, Object> initConnect() throws Exception;
 
 	Map<String, Object> testGroup() throws Exception;
 

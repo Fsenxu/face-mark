@@ -47,7 +47,7 @@ public class AccessController extends BaseController{
     
     @RequestMapping(value = "/screen/accessHistory")
     public ResponeResult accessHistory() throws Exception{
-    	Map<String, Object> map = sendService.testMeg();
+    	Map<String, Object> map = sendService.initConnect();
     	return new ResponeResult(map);
     }
     
