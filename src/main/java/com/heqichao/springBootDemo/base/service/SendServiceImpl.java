@@ -178,6 +178,33 @@ public class SendServiceImpl implements SendService {
 		
 	}
 	@Override
+	public Map<String,Object> personQuery(Map map) throws Exception{
+		Map<String,Object> res = new HashMap<String,Object>();
+		try {
+		String sn = map.remove("sn_code").toString();
+		StringBuilder outJsonStr = new StringBuilder();
+        JSONObject inJson = new JSONObject(map);
+
+//        inJson.put("offset", 0);
+//        inJson.put("size", 10);
+        inJson.put("get_feature", false);
+        int ret = MegFaceManager.queryPerson(SDKInitUnit.getDevice(), inJson.toString(), outJsonStr);
+        JSONObject outJson = new JSONObject(outJsonStr);
+        outJson.put("sn_code", sn);
+        res.put("status", ret);
+        res.put("type", "query_person");
+        res.put("outPut", outJson);
+        return res;
+        }catch (IOException e) {
+            e.printStackTrace();
+            res.put("status", 504);
+            res.put("type", "query_person");
+            res.put("outPut", "查询参数错误");
+            return res;
+        }
+        
+	}
+	@Override
 	public Map<String,Object> personAdd(Map map) throws Exception{
 		 Map<String,Object> res = new HashMap<String,Object>();
 		 Date date = new Date();

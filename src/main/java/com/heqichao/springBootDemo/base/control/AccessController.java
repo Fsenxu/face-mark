@@ -37,6 +37,12 @@ public class AccessController extends BaseController{
     	
     	return new ResponeResult(res);
     }
+    @RequestMapping(value = "/person/query")
+    public ResponeResult personQuery(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.personQuery(map);
+    	
+    	return new ResponeResult(res);
+    }
     
     @RequestMapping(value = "/device/initAlarm")
     public ResponeResult initAlarm() throws Exception{
