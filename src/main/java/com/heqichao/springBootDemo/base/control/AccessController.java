@@ -38,15 +38,20 @@ public class AccessController extends BaseController{
     	return new ResponeResult(res);
     }
     
-    @RequestMapping(value = "/screen/accessOnline")
-    public ResponeResult accessOnline() throws Exception{
-    	Map<String, Object> map = sendService.testGroup();
+    @RequestMapping(value = "/device/initAlarm")
+    public ResponeResult initAlarm() throws Exception{
+    	Map<String, Object> map = sendService.initAlarm();
     	return new ResponeResult(map);
     }
     
     
     @RequestMapping(value = "/screen/accessHistory")
     public ResponeResult accessHistory() throws Exception{
+    	Map<String, Object> map = sendService.initConnect();
+    	return new ResponeResult(map);
+    }
+    @RequestMapping(value = "/device/initConnect")
+    public ResponeResult initConnect() throws Exception{
     	Map<String, Object> map = sendService.initConnect();
     	return new ResponeResult(map);
     }

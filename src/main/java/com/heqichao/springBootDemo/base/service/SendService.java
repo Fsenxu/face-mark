@@ -14,4 +14,6 @@ public interface SendService {
 	Map<String, Object> testGroup() throws Exception;
 
 	Map<String, Object> personAdd(Map map) throws Exception;
+
+	Map<String, Object> initAlarm() throws Exception;
 }

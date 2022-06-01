@@ -1,11 +1,15 @@
 package com.heqichao.springBootDemo.base.service;
 
 import static com.heqichao.springBootDemo.megprotocol.Utils.CommonFunction.getContent;
-import static com.heqichao.springBootDemo.megprotocol.Utils.CommonFunction.waitMs;
 
+import java.awt.image.BufferedImage;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
@@ -14,26 +18,23 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.imageio.ImageIO;
+
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.heqichao.springBootDemo.base.util.SmsUtil;
-import  com.heqichao.springBootDemo.megprotocol.Clibrary;
 import com.heqichao.springBootDemo.megprotocol.MegConnectLibrary;
-import com.heqichao.springBootDemo.megprotocol.MegDevice;
-import com.heqichao.springBootDemo.megprotocol.MegError;
-import com.heqichao.springBootDemo.megprotocol.MegException;
 import com.heqichao.springBootDemo.megprotocol.MegFaceManager;
 import com.heqichao.springBootDemo.megprotocol.SDKInitUnit;
+import com.heqichao.springBootDemo.megprotocol.MegError;
 import  com.heqichao.springBootDemo.megprotocol.MegCommon;
 import com.heqichao.springBootDemo.megprotocol.MegDeviceStorage;
 import com.heqichao.springBootDemo.megprotocol.MegDeviceAlarm;
 import com.sun.jna.Memory;
-import com.sun.jna.NativeLong;
 import com.sun.jna.Pointer;
 import com.sun.jna.Structure;
 import com.sun.jna.WString;
@@ -54,6 +55,8 @@ public class SendServiceImpl implements SendService {
     @Autowired
     private SmsUtil smsUtil;
     
+    private MediaDeviceAlarmCb deviceAlarmCb = new MediaDeviceAlarmCb();
+    
     //如果配置在类上 则整个类的方法均有事务
     @Transactional
     @Override
@@ -69,6 +72,59 @@ public class SendServiceImpl implements SendService {
 		return map;
 		
     }
+	@Override
+	public Map<String,Object> initAlarm() throws Exception{
+		Map<String,Object> map = new HashMap<String,Object>();
+		StringBuilder outJsonStr = new StringBuilder();
+
+        int ret = MegDeviceAlarm.subscribeStream(SDKInitUnit.getDevice(), outJsonStr, deviceAlarmCb, null, null, null);
+        map.put("open_Alarm_status", ret);
+
+        if (ret != MegError.ERROR_OK.getCode())
+        {
+            
+            return map;
+        }
+        JSONObject outJson = new JSONObject(outJsonStr.toString());
+        int handle = outJson.getInt("handle");
+        map.put("handle", handle);
+        
+        JSONObject inJson = new JSONObject();
+        JSONArray alarmType = new JSONArray();
+        JSONObject alarmTypeItem = new JSONObject();
+        JSONArray minorType = new JSONArray();
+        minorType.put("normal_access_of_staff");//员工正常通行时间
+//        minorType.put("network_disconnect");
+//        minorType.put("ip_conflict");//IP冲突
+//        minorType.put("mac_conflict");//MAC冲突
+//        minorType.put("sd_card_abnormal");//SD卡异常
+//        minorType.put("network_alarm");//网络报警
+//        minorType.put("network_recovery");//网络恢复
+//        minorType.put("io_input");//io输入报警
+//        minorType.put("stranger");//陌生人
+        minorType.put("non_living_attack");//非活体攻击
+        minorType.put("no_wear_respirator");//未戴口罩
+        minorType.put("import_person_try_to_pass");//重点人员尝试通行
+        minorType.put("stranger_try_to_pass");//陌生人尝试通行
+        minorType.put("abnormal_access_of_staff");//员工非通行时间尝试访问
+        minorType.put("normal_access_of_visitor");//访客正常通行时间
+        minorType.put("abnormal_access_of_visitor");//访客非通行时间尝试访问
+        minorType.put("fire_control");//消防报警
+        minorType.put("door_always_open");//门常开未关
+        minorType.put("doorbell_rings");//门铃响
+        minorType.put("suspicious_target");//可疑目标
+
+        alarmTypeItem.put("major_type", "access_control");
+        alarmTypeItem.put("minor_type", minorType);
+        alarmType.put(alarmTypeItem);
+
+        inJson.put("alarm_type", alarmType);
+        inJson.put("handle", handle);
+        int retAlarm = MegDeviceAlarm.subscribeAlarmType(SDKInitUnit.getDevice(), inJson.toString());
+        
+        map.put("retAlarm", retAlarm);
+        return map;
+	}
 	
 	@Override
 	public Map<String,Object> testGroup() throws Exception{
@@ -147,6 +203,11 @@ public class SendServiceImpl implements SendService {
         	connection.setConnectTimeout(10*1000);
         	//输入流
         	InputStream stream = connection.getInputStream();
+        	//获取分辨率
+        	BufferedImage sourceImg = ImageIO.read(stream);
+        	int width = sourceImg.getWidth();
+        	int height = sourceImg.getHeight();
+        	//写文件
         	int len = 0;
         	byte[] test = new byte[1024];
             FileOutputStream fos;
@@ -159,7 +220,9 @@ public class SendServiceImpl implements SendService {
             stream.close();
             fos.close();
             //修改图片尺寸
-            Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
+            if(width>1080 || height>1080) {
+            	Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
+            }
         } catch (IOException e) {
             e.printStackTrace();
             res.put("status", 504);
@@ -224,31 +287,54 @@ public class SendServiceImpl implements SendService {
     private static class MediaDeviceAlarmCb implements MegDeviceAlarm.MediaDeviceAlarmCb {
         @Override
         public void invoke(MegCommon.AlarmMsg.ByReference alarmMsg, Pointer userArg) {
-        	UserStruct user = new UserStruct(userArg);
+//        	UserStruct user = new UserStruct(userArg);
             byte[] info = alarmMsg.jsonInfo.getByteArray(0, alarmMsg.infoLen);
             String infoStr = new String(info);
-            log.info("info: " + infoStr);
-            log.info("binDataNumSize: " + alarmMsg.data.binDataNumSize);
-            log.info("type: " + alarmMsg.data.binDataInfos.type);
-
-            MegCommon.BinDataInfo[] binDataInfos = (MegCommon.BinDataInfo[])alarmMsg.data.binDataInfos.toArray(alarmMsg.data.binDataNumSize);
-
-            for (MegCommon.BinDataInfo binDataInfo : binDataInfos)
-            {
-                log.info("binDataInfos: " + binDataInfo.size);
-
-                byte[] data = binDataInfo.binData.getByteArray(0, binDataInfo.size);
-                try {
-                	String path = System.getProperty("user.dir");
-                	Date date = new Date();
-                    FileOutputStream fos;
-                    fos = new FileOutputStream(path + "/data/"+date.getTime()+".jpg", false);
-                    fos.write(data);
-                    fos.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+//            log.info("info: " + infoStr);
+//            log.info("binDataNumSize: " + alarmMsg.data.binDataNumSize);
+//            log.info("type: " + alarmMsg.data.binDataInfos.type);
+            JSONObject outJson = new JSONObject(infoStr);
+            outJson.put("sn_code", "M014001972111000033");
+            log.info("info: " + outJson.toString());
+			try {
+				URL url = new URL("http://ksjxisv.tfkuding.com/callback/240_handle");
+			
+	            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+	            // 设置请求方式
+	            connection.setRequestMethod("POST");
+	            // 设置是否向HttpURLConnection输出
+	            connection.setDoOutput(true);
+	            // 设置是否从httpUrlConnection读入
+	            connection.setDoInput(true);
+	            // 设置是否使用缓存
+	            connection.setUseCaches(false);
+	            connection.setConnectTimeout(10 * 1000);
+	            //设置参数类型是json格式
+	            connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+	            connection.setRequestProperty("Connection", "Keep-Alive");
+	            connection.connect();
+	
+		          BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), "UTF-8"));
+		          writer.write(outJson.toString());
+		          writer.close();
+		
+		          int responseCode = connection.getResponseCode();
+		          if(responseCode == HttpURLConnection.HTTP_OK) {
+		        	  String result="";
+		              //定义 BufferedReader输入流来读取URL的响应
+		              BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+		              String line;
+		              while ((line = in.readLine()) != null) {
+		                  result += line;
+		              }
+		              log.info(result);
+		          }
+		          connection.disconnect();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				log.error("请求结果读取异常");
+			}
         }
     }
     public static class UserStruct extends Structure{
