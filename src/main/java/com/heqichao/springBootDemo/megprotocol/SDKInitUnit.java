@@ -89,7 +89,7 @@ public class SDKInitUnit {
             MegConnectLibrary.INSTANTCE.meg_conn_login(g_url);
         }
         else
-        {
+        {//不断检查重连
             while (true)
             {
                 waitMs(1000);

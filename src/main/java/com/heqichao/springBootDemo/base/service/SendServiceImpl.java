@@ -5,6 +5,7 @@ import static com.heqichao.springBootDemo.megprotocol.Utils.CommonFunction.getCo
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -72,22 +73,24 @@ public class SendServiceImpl implements SendService {
 		return map;
 		
     }
+	
 	@Override
-	public Map<String,Object> initAlarm() throws Exception{
-		Map<String,Object> map = new HashMap<String,Object>();
+	public Map<String,Object> initAlarm(Map map) throws Exception{
+		String sn = map.remove("sn_code").toString();
+		Map<String,Object> res = new HashMap<String,Object>();
+		res.put("sn_code", sn);
 		StringBuilder outJsonStr = new StringBuilder();
 
         int ret = MegDeviceAlarm.subscribeStream(SDKInitUnit.getDevice(), outJsonStr, deviceAlarmCb, null, null, null);
-        map.put("open_Alarm_status", ret);
+        res.put("open_alarm_status", ret);
 
         if (ret != MegError.ERROR_OK.getCode())
         {
-            
-            return map;
+            return res;
         }
         JSONObject outJson = new JSONObject(outJsonStr.toString());
         int handle = outJson.getInt("handle");
-        map.put("handle", handle);
+        res.put("handle", handle);
         
         JSONObject inJson = new JSONObject();
         JSONArray alarmType = new JSONArray();
@@ -122,8 +125,8 @@ public class SendServiceImpl implements SendService {
         inJson.put("handle", handle);
         int retAlarm = MegDeviceAlarm.subscribeAlarmType(SDKInitUnit.getDevice(), inJson.toString());
         
-        map.put("retAlarm", retAlarm);
-        return map;
+        res.put("alarm_status", retAlarm);
+        return res;
 	}
 	
 	@Override
@@ -217,6 +220,7 @@ public class SendServiceImpl implements SendService {
 		String rootPath = System.getProperty("user.dir");
 		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
 		String pathFile590 = rootPath + "/data/"+picName+"_"+pictureCode+"_590."+type;
+		String usedPath = pathFile;
 		
         try {
         	//建立图片连接
@@ -249,6 +253,7 @@ public class SendServiceImpl implements SendService {
             //修改图片尺寸
             if(width>1080 || height>1080) {
             	Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
+            	usedPath = pathFile590;
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -267,7 +272,7 @@ public class SendServiceImpl implements SendService {
         byte[] data = null;
         try
         {
-            data = getContent(pathFile590);
+            data = getContent(usedPath);
         }
         catch (IOException e)
         {
@@ -302,7 +307,10 @@ public class SendServiceImpl implements SendService {
         personFaces.faces[2].data = null;
 
         int ret = MegFaceManager.addPerson(SDKInitUnit.getDevice(), new JSONObject(map).toString(), personFaces, outJsonStr);
-        
+        if(ret == 0) {
+        	File fileDelete = new File(usedPath);
+        	fileDelete.delete();
+        }
 		res.put("status", ret);
         res.put("type", "add_person");
         res.put("outPut", outJsonStr.toString());

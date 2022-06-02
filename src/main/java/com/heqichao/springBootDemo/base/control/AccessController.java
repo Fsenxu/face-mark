@@ -45,9 +45,9 @@ public class AccessController extends BaseController{
     }
     
     @RequestMapping(value = "/device/initAlarm")
-    public ResponeResult initAlarm() throws Exception{
-    	Map<String, Object> map = sendService.initAlarm();
-    	return new ResponeResult(map);
+    public ResponeResult initAlarm(Map map) throws Exception{
+    	Map<String, Object> res = sendService.initAlarm(map);
+    	return new ResponeResult(res);
     }
     
     
