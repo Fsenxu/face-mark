@@ -11,11 +11,18 @@ public interface SendService {
 
 	Map<String, Object> initConnect() throws Exception;
 
-	Map<String, Object> testGroup() throws Exception;
 
+	/**
+	 * 添加人员底库
+	 * @param map
+	 * @return
+	 * @throws Exception
+	 */
 	Map<String, Object> personAdd(Map map) throws Exception;
 
 	Map<String, Object> personQuery(Map map) throws Exception;
 
 	Map<String, Object> initAlarm(Map map) throws Exception;
+
+	Map<String, Object> testGroup(Map map) throws Exception;
 }

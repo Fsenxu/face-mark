@@ -1,6 +1,8 @@
 package com.heqichao.springBootDemo.base.listener;
 
 import com.heqichao.springBootDemo.base.config.PropertiesConfig;
+import com.heqichao.springBootDemo.megprotocol.SDKInitUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ public class MyApplicationRunningListener implements ApplicationRunner {
     }
 
     private void initTask(){
+    	SDKInitUnit.sdkInit();
         logger.info("environment ："+propertiesConfig.getSystemEnviromment());
     }
 

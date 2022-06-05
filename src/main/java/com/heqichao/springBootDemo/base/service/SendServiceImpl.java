@@ -6,6 +6,7 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,22 +27,16 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import com.heqichao.springBootDemo.base.util.SmsUtil;
-import com.heqichao.springBootDemo.megprotocol.MegConnectLibrary;
+import com.heqichao.springBootDemo.megprotocol.MegDevice;
 import com.heqichao.springBootDemo.megprotocol.MegFaceManager;
 import com.heqichao.springBootDemo.megprotocol.SDKInitUnit;
 import com.heqichao.springBootDemo.megprotocol.MegError;
 import  com.heqichao.springBootDemo.megprotocol.MegCommon;
-import com.heqichao.springBootDemo.megprotocol.MegDeviceStorage;
+import com.heqichao.springBootDemo.megprotocol.MegCommon.AlarmSnCodeCbArg;
 import com.heqichao.springBootDemo.megprotocol.MegDeviceAlarm;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
-import com.sun.jna.Structure;
-import com.sun.jna.WString;
-import com.sun.jna.ptr.IntByReference;
-import com.sun.jna.ptr.PointerByReference;
-
 import lombok.extern.slf4j.Slf4j;
 import net.coobird.thumbnailator.Thumbnails;
 
@@ -79,9 +74,19 @@ public class SendServiceImpl implements SendService {
 		String sn = map.remove("sn_code").toString();
 		Map<String,Object> res = new HashMap<String,Object>();
 		res.put("sn_code", sn);
+		res.put("type", "init_alarm");
 		StringBuilder outJsonStr = new StringBuilder();
-
-        int ret = MegDeviceAlarm.subscribeStream(SDKInitUnit.getDevice(), outJsonStr, deviceAlarmCb, null, null, null);
+		MegDevice megDevice = SDKInitUnit.getDevice(sn,MegDeviceAlarm.getModuleName());
+		if(megDevice == null) {
+			res.put("status", 8);
+			res.put("outPut", "无设备连接或设备连接初始化失败");
+			return res;
+		}
+		AlarmSnCodeCbArg arg = new MegCommon.AlarmSnCodeCbArg();
+		arg.id = SDKInitUnit.getRandomNumberInRange();
+		arg.url =megDevice.getUrl(); 
+		arg.write();
+        int ret = MegDeviceAlarm.subscribeStream(megDevice, outJsonStr, deviceAlarmCb, arg.getPointer(), null, null);
         res.put("open_alarm_status", ret);
 
         if (ret != MegError.ERROR_OK.getCode())
@@ -123,61 +128,57 @@ public class SendServiceImpl implements SendService {
 
         inJson.put("alarm_type", alarmType);
         inJson.put("handle", handle);
-        int retAlarm = MegDeviceAlarm.subscribeAlarmType(SDKInitUnit.getDevice(), inJson.toString());
+        int retAlarm = MegDeviceAlarm.subscribeAlarmType(megDevice, inJson.toString());
         
         res.put("alarm_status", retAlarm);
         return res;
 	}
 	
 	@Override
-	public Map<String,Object> testGroup() throws Exception{
-		Map<String,Object> map = new HashMap<String,Object>();
-		StringBuilder outJsonStr = new StringBuilder();
-		JSONObject inJson = new JSONObject();
-		inJson.put("offset", 0);
-        inJson.put("size", 10);
-        inJson.put("get_feature", false);
-        int ret = MegDeviceAlarm.queryAlarmHistory(SDKInitUnit.getDevice(), inJson.toString(), outJsonStr);
-        map.put("ret", ret);
-        map.put("outJsonStr", outJsonStr.toString());
-        
-        
-        JSONObject outJson = new JSONObject(outJsonStr.toString());
-
-        JSONArray alarmList = outJson.getJSONArray("list");
-        if (alarmList.length() != 10)
-        {
-            log.error("alarm num is wrong!");
-        }
-
-        JSONArray fullImages = alarmList.getJSONObject(0).getJSONArray("full_images");
-        JSONObject fullImage = fullImages.getJSONObject(0);
-        JSONObject image_data = fullImage.getJSONObject("image_data");
-        
-        String imagePath = image_data.getString("value");
-         inJson = new JSONObject();
-        inJson.put("image_uri", imagePath);
-        IntByReference imgSize = new IntByReference();
-        PointerByReference imgData = new PointerByReference();
-        int ret2 = MegDeviceStorage.getImage(SDKInitUnit.getDevice(), inJson.toString(), imgSize, imgData);
-        log.debug("getImage img_size: " + imgSize.getValue());
-        map.put("ret2", ret2);
-        map.put("img_size", imgSize.getValue());
-
-        byte[] data = imgData.getValue().getByteArray(0, imgSize.getValue());
-        try {
-        	String path = System.getProperty("user.dir");
-        	Date date = new Date();
+	public Map<String,Object> testGroup(Map map) throws Exception{
+		Map<String,Object> res = new HashMap<String,Object>();
+		Date date = new Date();
+		String picName = date.getTime()+"";
+		String sn = map.remove("sn_code").toString();
+		String type = map.remove("image_type").toString();
+		String pictureUrl = map.remove("image_url").toString();
+		Map personInfo = (Map)map.get("person_info");
+		String pictureCode = personInfo.get("code").toString();
+		String rootPath = System.getProperty("user.dir");
+		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
+		String pathFile590 = rootPath + "/data/"+picName+"_"+pictureCode+"_590."+type;
+		String usedPath = pathFile;
+		try {
+			//建立图片连接
+        	URL url = new URL(pictureUrl);
+        	HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        	//设置请求方式
+        	connection.setRequestMethod("GET");
+        	//设置超时时间
+        	connection.setConnectTimeout(10*1000);
+        	//输入流
+        	InputStream stream = connection.getInputStream();
+        	int len = 0;
+        	byte[] test = new byte[1024];
             FileOutputStream fos;
-            fos = new FileOutputStream(path + "/data/"+date.getTime()+".jpg", true);
-            fos.write(data);
+            fos = new FileOutputStream(pathFile, true);
+            //以流的方式上传
+            while ((len =stream.read(test)) !=-1){
+                fos.write(test,0,len);
+            }
+          //记得关闭流，不然消耗资源
+            stream.close();
             fos.close();
+            
         } catch (IOException e) {
             e.printStackTrace();
+            res.put("status", 504);
+            res.put("type", "add_person");
+            res.put("outPut", "图片下载失败");
+            return res;
         }
-        MegConnectLibrary.INSTANTCE.meg_conn_free(imgData.getValue());
 		
-		return map;
+		return res;
 		
 	}
 	@Override
@@ -187,16 +188,21 @@ public class SendServiceImpl implements SendService {
 		String sn = map.remove("sn_code").toString();
 		StringBuilder outJsonStr = new StringBuilder();
         JSONObject inJson = new JSONObject(map);
-
-//        inJson.put("offset", 0);
-//        inJson.put("size", 10);
         inJson.put("get_feature", false);
-        int ret = MegFaceManager.queryPerson(SDKInitUnit.getDevice(), inJson.toString(), outJsonStr);
-        JSONObject outJson = new JSONObject(outJsonStr);
+        
+        MegDevice megDevice = SDKInitUnit.getDevice(sn,MegFaceManager.getModuleName());
+        if(megDevice == null) {
+			res.put("status", 8);
+			res.put("outPut", "无设备连接或设备连接初始化失败");
+			return res;
+		}
+        int ret = MegFaceManager.queryPerson(megDevice, inJson.toString(), outJsonStr);
+        JSONObject outJson = new JSONObject(outJsonStr.toString());
         outJson.put("sn_code", sn);
+        log.info("outJsonStr:"+outJson.toString());
         res.put("status", ret);
         res.put("type", "query_person");
-        res.put("outPut", outJson);
+        res.put("outPut", outJson.toString());
         return res;
         }catch (IOException e) {
             e.printStackTrace();
@@ -207,11 +213,12 @@ public class SendServiceImpl implements SendService {
         }
         
 	}
+	
 	@Override
 	public Map<String,Object> personAdd(Map map) throws Exception{
-		 Map<String,Object> res = new HashMap<String,Object>();
-		 Date date = new Date();
-		 String picName = date.getTime()+"";
+		Map<String,Object> res = new HashMap<String,Object>();
+		Date date = new Date();
+		String picName = date.getTime()+"";
 		String sn = map.remove("sn_code").toString();
 		String type = map.remove("image_type").toString();
 		String pictureUrl = map.remove("image_url").toString();
@@ -221,7 +228,12 @@ public class SendServiceImpl implements SendService {
 		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
 		String pathFile590 = rootPath + "/data/"+picName+"_"+pictureCode+"_590."+type;
 		String usedPath = pathFile;
-		
+		MegDevice megDevice = SDKInitUnit.getDevice(sn,MegFaceManager.getModuleName());
+		if(megDevice == null) {
+			res.put("status", 8);
+			res.put("outPut", "无设备连接或设备连接初始化失败");
+			return res;
+		}
         try {
         	//建立图片连接
         	URL url = new URL(pictureUrl);
@@ -234,10 +246,6 @@ public class SendServiceImpl implements SendService {
         	connection.setConnectTimeout(10*1000);
         	//输入流
         	InputStream stream = connection.getInputStream();
-        	//获取分辨率
-        	BufferedImage sourceImg = ImageIO.read(stream);
-        	int width = sourceImg.getWidth();
-        	int height = sourceImg.getHeight();
         	//写文件
         	int len = 0;
         	byte[] test = new byte[1024];
@@ -250,10 +258,21 @@ public class SendServiceImpl implements SendService {
           //记得关闭流，不然消耗资源
             stream.close();
             fos.close();
-            //修改图片尺寸
-            if(width>1080 || height>1080) {
-            	Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
-            	usedPath = pathFile590;
+          //获取分辨率
+            File file = new File(pathFile);
+            if(file.length()>0) {
+            	FileInputStream fileInputStream = new FileInputStream(file);
+            	BufferedImage sourceImg = ImageIO.read(fileInputStream);
+            	int width = sourceImg.getWidth();
+            	int height = sourceImg.getHeight();
+            	log.info("img_width:"+width);
+            	log.info("img_height:"+height);
+            	fileInputStream.close();
+            	//修改图片尺寸
+            	if(width>1080 || height>1080) {
+            		Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
+            		usedPath = pathFile590;
+            	}
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -262,12 +281,11 @@ public class SendServiceImpl implements SendService {
             res.put("outPut", "图片下载失败");
             return res;
         }
+        
 		StringBuilder outJsonStr = new StringBuilder();
 		List<Map<String,Object>> dataList = new ArrayList<Map<String,Object>>();
 		Map<String,Object> dataMap = new HashMap<String,Object>();
 		Map<String,Object> faceData = new HashMap<String,Object>();
-		
-		
 
         byte[] data = null;
         try
@@ -306,7 +324,7 @@ public class SendServiceImpl implements SendService {
         personFaces.faces[2].data_size = 0;
         personFaces.faces[2].data = null;
 
-        int ret = MegFaceManager.addPerson(SDKInitUnit.getDevice(), new JSONObject(map).toString(), personFaces, outJsonStr);
+        int ret = MegFaceManager.addPerson(megDevice, new JSONObject(map).toString(), personFaces, outJsonStr);
         if(ret == 0) {
         	File fileDelete = new File(usedPath);
         	fileDelete.delete();
@@ -319,19 +337,26 @@ public class SendServiceImpl implements SendService {
 	}
     
     
-    private static class MediaDeviceAlarmCb implements MegDeviceAlarm.MediaDeviceAlarmCb {
+    public static class MediaDeviceAlarmCb implements MegDeviceAlarm.MediaDeviceAlarmCb {
         @Override
         public void invoke(MegCommon.AlarmMsg.ByReference alarmMsg, Pointer userArg) {
-//        	UserStruct user = new UserStruct(userArg);
+        	AlarmSnCodeCbArg arg = new MegCommon.AlarmSnCodeCbArg(userArg);
+        	arg.read();
             byte[] info = alarmMsg.jsonInfo.getByteArray(0, alarmMsg.infoLen);
             String infoStr = new String(info);
-//            log.info("info: " + infoStr);
+            log.info("callbackPointer: " + userArg);
+            log.info("argId: " + arg.id+",argUrl:"+arg.url);
 //            log.info("binDataNumSize: " + alarmMsg.data.binDataNumSize);
 //            log.info("type: " + alarmMsg.data.binDataInfos.type);
-            JSONObject outJson = new JSONObject(infoStr);
-            outJson.put("sn_code", "M014001972111000033");
-            log.info("info: " + outJson.toString());
 			try {
+				JSONObject outJson = new JSONObject(infoStr);
+				if(arg.url.length()>9) {
+					outJson.put("sn_code", arg.url.substring(9));
+					
+				}else {
+					outJson.put("sn_code", arg.url);
+				}
+				log.info("info: " + outJson.toString());
 				URL url = new URL("http://ksjxisv.tfkuding.com/callback/240_handle");
 			
 	            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
@@ -371,17 +396,5 @@ public class SendServiceImpl implements SendService {
 				log.error("请求结果读取异常");
 			}
         }
-    }
-    public static class UserStruct extends Structure{
-    	public UserStruct() {
-    		
-    	}
-        public UserStruct(Pointer userArg) {
-			// TODO Auto-generated constructor stub
-		}
-		public int id;
-        public WString name;
-        public int age;
-		
     }
 }

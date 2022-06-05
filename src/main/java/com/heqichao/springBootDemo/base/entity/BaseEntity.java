@@ -1,6 +1,5 @@
 package com.heqichao.springBootDemo.base.entity;
 
-import com.alibaba.fastjson.annotation.JSONField;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -16,11 +15,11 @@ public class BaseEntity implements Serializable {
     protected Integer id;
 
     //保存时间
-    @JSONField(format="yyyy-MM-dd HH:mm:ss")
+//    @JSONField(format="yyyy-MM-dd HH:mm:ss")
     protected Date addDate;
 
     //更新时间
-    @JSONField(format="yyyy-MM-dd HH:mm:ss")
+//    @JSONField(format="yyyy-MM-dd HH:mm:ss")
     protected Date udpDate;
 
     //保存人

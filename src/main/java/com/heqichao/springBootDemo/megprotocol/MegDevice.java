@@ -10,13 +10,30 @@ import java.util.Map;
 @Slf4j
 public class MegDevice {
     private final String url;
+    private Boolean connected = false;//连接状态
     private final Map<String, PointerByReference> moduleTable = new HashMap<>();
 
     public MegDevice(String url) {
         this.url = url;
     }
+    
 
-    private void registerModule(String moduleName) throws MegException {
+    public String getUrl() {
+		return url;
+	}
+
+
+	public Boolean getConnected() {
+		return connected;
+	}
+
+
+	public void setConnected(Boolean connected) {
+		this.connected = connected;
+	}
+
+
+	private void registerModule(String moduleName) throws MegException {
         PointerByReference ppModule;
 
         try{
@@ -46,6 +63,9 @@ public class MegDevice {
         registerModule(MegMediaPlayback.getModuleName());
         registerModule(MegFaceManager.getModuleName());
         registerModule(MegMediaSensor.getModuleName());
+    }
+    public void init(String moduleName) throws MegException {
+    	registerModule(moduleName);
     }
 
     public void deInit() throws MegException {

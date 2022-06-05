@@ -7,7 +7,6 @@ import com.heqichao.springBootDemo.base.util.StringUtil;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -45,18 +44,18 @@ public class AccessController extends BaseController{
     }
     
     @RequestMapping(value = "/device/initAlarm")
-    public ResponeResult initAlarm(Map map) throws Exception{
+    public ResponeResult initAlarm(@RequestBody Map map) throws Exception{
     	Map<String, Object> res = sendService.initAlarm(map);
     	return new ResponeResult(res);
     }
     
     
     @RequestMapping(value = "/screen/accessHistory")
-    public ResponeResult accessHistory() throws Exception{
-    	Map<String, Object> map = sendService.initConnect();
-    	return new ResponeResult(map);
+    public ResponeResult accessHistory(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.testGroup(map);
+    	return new ResponeResult(res);
     }
-    @RequestMapping(value = "/device/initConnect")
+    @RequestMapping(value = "/sdk/initConnect")
     public ResponeResult initConnect() throws Exception{
     	Map<String, Object> map = sendService.initConnect();
     	return new ResponeResult(map);

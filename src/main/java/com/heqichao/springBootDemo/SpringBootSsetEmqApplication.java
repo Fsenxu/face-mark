@@ -3,10 +3,6 @@ package com.heqichao.springBootDemo;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson.support.config.FastJsonConfig;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
-//import com.heqichao.springBootDemo.base.param.ResponeResult;
-//import com.heqichao.springBootDemo.base.entity.UserInfo;
-//import com.heqichao.springBootDemo.base.service.LoginService;
-import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
@@ -23,15 +19,9 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
-//controller注解
 @RestController
-//application注解
-// @SpringBootApplication = @SpringBootConfiguration + @EnableAutoConfiguration + @ComponentScan
-//@SpringBootConfiguration = @Configuration = @Component
-@MapperScan("com.heqichao.springBootDemo.*.mapper") //扫描mapper的路劲
 @EnableTransactionManagement // 开启事物
 @ServletComponentScan(basePackages = {"com.heqichao.springBootDemo.base.filter"})
-//@ComponentScan(basePackages = {"com.heqichao.page"})  扫描包下的子包、类
 @EnableScheduling // 整合quartz  开启定时任务功能
 @EnableAsync  // 开启异步任务 
 @SpringBootApplication

@@ -37,6 +37,13 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
+			<!-- 下面这个包会和json冲突 -->
+			 <exclusions>
+                <exclusion>
+                    <groupId>com.vaadin.external.google</groupId>
+                    <artifactId>android-json</artifactId>
+                </exclusion>
+    		</exclusions>
 		</dependency>
 
 		<dependency>
@@ -52,7 +59,7 @@
 		</dependency>
 
 
-		<!-- jdbc -->
+		<!-- jdbc 
 		<dependency>
 			<groupId>org.mybatis.spring.boot</groupId>
 			<artifactId>mybatis-spring-boot-starter</artifactId>
@@ -62,6 +69,7 @@
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 		</dependency>
+		-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -94,19 +102,19 @@
 			<version>1.2.58</version>
 		</dependency>
 
-		<!-- 分页 -->
+		<!-- 分页 
 		<dependency>
 			    <groupId>com.github.pagehelper</groupId>
 			     <artifactId>pagehelper-spring-boot-starter</artifactId>
 			     <version>1.2.13</version>
-		</dependency>
+		</dependency>-->
 
-		<!-- mqtt -->
+		<!-- mqtt 
 		<dependency>
 			<groupId>org.eclipse.paho</groupId>
 			<artifactId>org.eclipse.paho.client.mqttv3</artifactId>
 			<version>1.2.0</version>
-		</dependency>
+		</dependency>-->
 		<!-- org.apache.http -->
 		<dependency>
 		    <groupId>org.apache.httpcomponents</groupId>
@@ -185,12 +193,12 @@
 		    <version>1.0.1</version>
 		</dependency>
 
-		<!-- 汉字转拼音 -->
+		<!-- 汉字转拼音
 		<dependency>
 		    <groupId>com.belerweb</groupId>
 		    <artifactId>pinyin4j</artifactId>
 		    <version>2.5.0</version>
-		</dependency>
+		</dependency> -->
 		
 		<!-- 接收微信公众平台的xml -->
 		<dependency>
@@ -219,7 +227,7 @@
 	      <groupId>org.json</groupId>
 	      <artifactId>json</artifactId>
 	      <version>20220320</version>
-	    </dependency>
+	    </dependency> 
 	    <dependency>
 	      <groupId>org.javatuples</groupId>
 	      <artifactId>javatuples</artifactId>

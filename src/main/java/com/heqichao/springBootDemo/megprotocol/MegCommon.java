@@ -73,6 +73,23 @@ public class MegCommon {
             return Arrays.asList("infoLen", "jsonInfo", "data");
         }
     }
+    public static class AlarmSnCodeCbArg extends Structure {
+        public int id;
+        public String url;
+        public AlarmSnCodeCbArg() {
+            super();
+        }
+        @Override
+        protected List<String> getFieldOrder() {
+            return Arrays.asList("id", "url");
+        }
+
+        public AlarmSnCodeCbArg(Pointer peer) {
+            super(peer);
+        }
+        public static class ByReference extends AlarmSnCodeCbArg implements Structure.ByReference { }
+        public static class ByValue extends AlarmSnCodeCbArg implements Structure.ByValue { }
+    }
 
     public class PacketType
     {
