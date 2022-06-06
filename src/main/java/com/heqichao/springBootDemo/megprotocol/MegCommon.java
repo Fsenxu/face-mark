@@ -74,14 +74,14 @@ public class MegCommon {
         }
     }
     public static class AlarmSnCodeCbArg extends Structure {
-        public int id;
-        public String url;
+        public String callback;
+        public String sn;
         public AlarmSnCodeCbArg() {
             super();
         }
         @Override
         protected List<String> getFieldOrder() {
-            return Arrays.asList("id", "url");
+            return Arrays.asList("callback", "sn");
         }
 
         public AlarmSnCodeCbArg(Pointer peer) {

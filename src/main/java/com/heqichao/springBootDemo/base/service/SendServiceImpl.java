@@ -72,6 +72,7 @@ public class SendServiceImpl implements SendService {
 	@Override
 	public Map<String,Object> initAlarm(Map map) throws Exception{
 		String sn = map.remove("sn_code").toString();
+		String callback = map.remove("callback").toString();
 		Map<String,Object> res = new HashMap<String,Object>();
 		res.put("sn_code", sn);
 		res.put("type", "init_alarm");
@@ -83,8 +84,8 @@ public class SendServiceImpl implements SendService {
 			return res;
 		}
 		AlarmSnCodeCbArg arg = new MegCommon.AlarmSnCodeCbArg();
-		arg.id = SDKInitUnit.getRandomNumberInRange();
-		arg.url =megDevice.getUrl(); 
+		arg.callback = callback;
+		arg.sn =sn; 
 		arg.write();
         int ret = MegDeviceAlarm.subscribeStream(megDevice, outJsonStr, deviceAlarmCb, arg.getPointer(), null, null);
         res.put("open_alarm_status", ret);
@@ -199,7 +200,7 @@ public class SendServiceImpl implements SendService {
         int ret = MegFaceManager.queryPerson(megDevice, inJson.toString(), outJsonStr);
         JSONObject outJson = new JSONObject(outJsonStr.toString());
         outJson.put("sn_code", sn);
-        log.info("outJsonStr:"+outJson.toString());
+//        log.info("outJsonStr:"+outJson.toString());
         res.put("status", ret);
         res.put("type", "query_person");
         res.put("outPut", outJson.toString());
@@ -335,7 +336,132 @@ public class SendServiceImpl implements SendService {
         return res;
         
 	}
-    
+	@Override
+	public Map<String,Object> personUpdate(Map map) throws Exception{
+		Map<String,Object> res = new HashMap<String,Object>();
+		Date date = new Date();
+		String picName = date.getTime()+"";
+		String sn = map.remove("sn_code").toString();
+		MegDevice megDevice = SDKInitUnit.getDevice(sn,MegFaceManager.getModuleName());
+		if(megDevice == null) {
+			res.put("status", 8);
+			res.put("outPut", "无设备连接或设备连接初始化失败");
+			return res;
+		}
+		StringBuilder outJsonStr = new StringBuilder();
+		boolean hasFace = map.containsKey("image_url");
+		if(hasFace) {
+			
+		}
+		String type = map.remove("image_type").toString();
+		String pictureUrl = map.remove("image_url").toString();
+		String pictureCode = map.get("person_id").toString();
+		String rootPath = System.getProperty("user.dir");
+		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
+		String pathFile590 = rootPath + "/data/"+picName+"_"+pictureCode+"_590."+type;
+		String usedPath = pathFile;
+		
+        try {
+        	//建立图片连接
+        	URL url = new URL(pictureUrl);
+        	HttpURLConnection connection = (HttpURLConnection)url.openConnection();
+        	//设置referer白名单
+        	connection.setRequestProperty("referer","http://39.103.132.160");
+        	//设置请求方式
+        	connection.setRequestMethod("GET");
+        	//设置超时时间
+        	connection.setConnectTimeout(10*1000);
+        	//输入流
+        	InputStream stream = connection.getInputStream();
+        	//写文件
+        	int len = 0;
+        	byte[] test = new byte[1024];
+            FileOutputStream fos;
+            fos = new FileOutputStream(pathFile, true);
+            //以流的方式上传
+            while ((len =stream.read(test)) !=-1){
+                fos.write(test,0,len);
+            }
+          //记得关闭流，不然消耗资源
+            stream.close();
+            fos.close();
+          //获取分辨率
+            File file = new File(pathFile);
+            if(file.length()>0) {
+            	FileInputStream fileInputStream = new FileInputStream(file);
+            	BufferedImage sourceImg = ImageIO.read(fileInputStream);
+            	int width = sourceImg.getWidth();
+            	int height = sourceImg.getHeight();
+            	log.info("img_width:"+width);
+            	log.info("img_height:"+height);
+            	fileInputStream.close();
+            	//修改图片尺寸
+            	if(width>1080 || height>1080) {
+            		Thumbnails.of(pathFile).size(944,1024).toFile(pathFile590);
+            		usedPath = pathFile590;
+            	}
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            res.put("status", 504);
+            res.put("type", "update_person");
+            res.put("outPut", "图片下载失败");
+            return res;
+        }
+        
+		
+		List<Map<String,Object>> dataList = new ArrayList<Map<String,Object>>();
+		Map<String,Object> dataMap = new HashMap<String,Object>();
+		Map<String,Object> faceData = new HashMap<String,Object>();
+
+        byte[] data = null;
+        try
+        {
+            data = getContent(usedPath);
+        }
+        catch (IOException e)
+        {
+            log.error("Fail to read file!");
+        }
+        Pointer ptr = new Memory(data.length);
+        ptr.write(0, data, 0, data.length);
+        log.info("data.length:"+data.length);
+        dataMap.put("data_size", data.length);
+        dataMap.put("image_type", type);
+        dataMap.put("img_name", pictureCode+"addperson");
+        dataList.add(dataMap);
+        faceData.put("data", dataList);
+        faceData.put("data_type", 0);
+        faceData.put("save_image", true);
+        faceData.put("feature_version", "abc");
+        map.put("face_data", faceData);
+        
+        MegFaceManager.BinDataStruct.ByValue binData = new MegFaceManager.BinDataStruct.ByValue();
+        MegFaceManager.BinDataStruct.ByValue binData1 = new MegFaceManager.BinDataStruct.ByValue();
+        MegFaceManager.BinDataStruct.ByValue binData2 = new MegFaceManager.BinDataStruct.ByValue();
+
+        MegFaceManager.PersonFaceStruct personFaces = new MegFaceManager.PersonFaceStruct();
+        personFaces.faces[0] = binData;
+        personFaces.faces[0].data_size = data.length;
+        personFaces.faces[0].data = ptr;
+        personFaces.faces[1] = binData1;
+        personFaces.faces[1].data_size = 0;
+        personFaces.faces[1].data = null;
+        personFaces.faces[2] = binData2;
+        personFaces.faces[2].data_size = 0;
+        personFaces.faces[2].data = null;
+
+        int ret = MegFaceManager.addPerson(megDevice, new JSONObject(map).toString(), personFaces, outJsonStr);
+        if(ret == 0) {
+        	File fileDelete = new File(usedPath);
+        	fileDelete.delete();
+        }
+		res.put("status", ret);
+        res.put("type", "add_person");
+        res.put("outPut", outJsonStr.toString());
+        return res;
+        
+	}
     
     public static class MediaDeviceAlarmCb implements MegDeviceAlarm.MediaDeviceAlarmCb {
         @Override
@@ -345,51 +471,50 @@ public class SendServiceImpl implements SendService {
             byte[] info = alarmMsg.jsonInfo.getByteArray(0, alarmMsg.infoLen);
             String infoStr = new String(info);
             log.info("callbackPointer: " + userArg);
-            log.info("argId: " + arg.id+",argUrl:"+arg.url);
+            log.info("argCallback: " + arg.callback+",argSn:"+arg.sn);
 //            log.info("binDataNumSize: " + alarmMsg.data.binDataNumSize);
 //            log.info("type: " + alarmMsg.data.binDataInfos.type);
 			try {
 				JSONObject outJson = new JSONObject(infoStr);
-				if(arg.url.length()>9) {
-					outJson.put("sn_code", arg.url.substring(9));
-					
-				}else {
-					outJson.put("sn_code", arg.url);
-				}
+				outJson.put("sn_code", arg.sn);
 				log.info("info: " + outJson.toString());
-				URL url = new URL("http://ksjxisv.tfkuding.com/callback/240_handle");
-			
-	            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-	            // 设置请求方式
-	            connection.setRequestMethod("POST");
-	            // 设置是否向HttpURLConnection输出
-	            connection.setDoOutput(true);
-	            // 设置是否从httpUrlConnection读入
-	            connection.setDoInput(true);
-	            // 设置是否使用缓存
-	            connection.setUseCaches(false);
-	            connection.setConnectTimeout(10 * 1000);
-	            //设置参数类型是json格式
-	            connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
-	            connection.setRequestProperty("Connection", "Keep-Alive");
-	            connection.connect();
-	
-		          BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), "UTF-8"));
-		          writer.write(outJson.toString());
-		          writer.close();
-		
-		          int responseCode = connection.getResponseCode();
-		          if(responseCode == HttpURLConnection.HTTP_OK) {
-		        	  String result="";
-		              //定义 BufferedReader输入流来读取URL的响应
-		              BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-		              String line;
-		              while ((line = in.readLine()) != null) {
-		                  result += line;
-		              }
-		              log.info(result);
-		          }
-		          connection.disconnect();
+				if(arg.callback.length()>1) {
+					
+//					URL url = new URL("http://ksjxisv.tfkuding.com/callback/240_handle");
+					URL url = new URL(arg.callback);
+					
+					HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+					// 设置请求方式
+					connection.setRequestMethod("POST");
+					// 设置是否向HttpURLConnection输出
+					connection.setDoOutput(true);
+					// 设置是否从httpUrlConnection读入
+					connection.setDoInput(true);
+					// 设置是否使用缓存
+					connection.setUseCaches(false);
+					connection.setConnectTimeout(10 * 1000);
+					//设置参数类型是json格式
+					connection.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+					connection.setRequestProperty("Connection", "Keep-Alive");
+					connection.connect();
+					
+					BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream(), "UTF-8"));
+					writer.write(outJson.toString());
+					writer.close();
+					
+					int responseCode = connection.getResponseCode();
+					if(responseCode == HttpURLConnection.HTTP_OK) {
+						String result="";
+						//定义 BufferedReader输入流来读取URL的响应
+						BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+						String line;
+						while ((line = in.readLine()) != null) {
+							result += line;
+						}
+						log.info(result);
+					}
+					connection.disconnect();
+				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

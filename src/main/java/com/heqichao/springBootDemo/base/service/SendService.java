@@ -19,6 +19,8 @@ public interface SendService {
 	 * @throws Exception
 	 */
 	Map<String, Object> personAdd(Map map) throws Exception;
+	
+	Map<String, Object> personUpdate(Map map) throws Exception;
 
 	Map<String, Object> personQuery(Map map) throws Exception;
 
