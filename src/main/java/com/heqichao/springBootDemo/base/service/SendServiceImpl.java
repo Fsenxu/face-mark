@@ -32,8 +32,10 @@ import com.heqichao.springBootDemo.megprotocol.MegDevice;
 import com.heqichao.springBootDemo.megprotocol.MegFaceManager;
 import com.heqichao.springBootDemo.megprotocol.SDKInitUnit;
 import com.heqichao.springBootDemo.megprotocol.MegError;
-import  com.heqichao.springBootDemo.megprotocol.MegCommon;
+import com.heqichao.springBootDemo.megprotocol.MegCommon;
 import com.heqichao.springBootDemo.megprotocol.MegCommon.AlarmSnCodeCbArg;
+import com.heqichao.springBootDemo.megprotocol.MegDevRules;
+import com.heqichao.springBootDemo.megprotocol.MegIntelliManager;
 import com.heqichao.springBootDemo.megprotocol.MegDeviceAlarm;
 import com.sun.jna.Memory;
 import com.sun.jna.Pointer;
@@ -51,7 +53,8 @@ public class SendServiceImpl implements SendService {
     @Autowired
     private SmsUtil smsUtil;
     
-    private MediaDeviceAlarmCb deviceAlarmCb = new MediaDeviceAlarmCb();
+    private final MediaDeviceAlarmCb deviceAlarmCb = new MediaDeviceAlarmCb();
+    private final AlarmSnCodeCbArg arg = new MegCommon.AlarmSnCodeCbArg();
     
     //如果配置在类上 则整个类的方法均有事务
     @Transactional
@@ -83,7 +86,7 @@ public class SendServiceImpl implements SendService {
 			res.put("outPut", "无设备连接或设备连接初始化失败");
 			return res;
 		}
-		AlarmSnCodeCbArg arg = new MegCommon.AlarmSnCodeCbArg();
+		
 		arg.callback = callback;
 		arg.sn =sn; 
 		arg.write();
@@ -138,47 +141,67 @@ public class SendServiceImpl implements SendService {
 	@Override
 	public Map<String,Object> testGroup(Map map) throws Exception{
 		Map<String,Object> res = new HashMap<String,Object>();
-		Date date = new Date();
-		String picName = date.getTime()+"";
 		String sn = map.remove("sn_code").toString();
-		String type = map.remove("image_type").toString();
-		String pictureUrl = map.remove("image_url").toString();
-		Map personInfo = (Map)map.get("person_info");
-		String pictureCode = personInfo.get("code").toString();
-		String rootPath = System.getProperty("user.dir");
-		String pathFile = rootPath + "/data/"+picName+"_"+pictureCode+"."+type;
-		String pathFile590 = rootPath + "/data/"+picName+"_"+pictureCode+"_590."+type;
-		String usedPath = pathFile;
-		try {
-			//建立图片连接
-        	URL url = new URL(pictureUrl);
-        	HttpURLConnection connection = (HttpURLConnection)url.openConnection();
-        	//设置请求方式
-        	connection.setRequestMethod("GET");
-        	//设置超时时间
-        	connection.setConnectTimeout(10*1000);
-        	//输入流
-        	InputStream stream = connection.getInputStream();
-        	int len = 0;
-        	byte[] test = new byte[1024];
-            FileOutputStream fos;
-            fos = new FileOutputStream(pathFile, true);
-            //以流的方式上传
-            while ((len =stream.read(test)) !=-1){
-                fos.write(test,0,len);
-            }
-          //记得关闭流，不然消耗资源
-            stream.close();
-            fos.close();
-            
-        } catch (IOException e) {
-            e.printStackTrace();
-            res.put("status", 504);
-            res.put("type", "add_person");
-            res.put("outPut", "图片下载失败");
-            return res;
-        }
-		
+		StringBuilder outJsonStr = new StringBuilder();
+
+		JSONObject inJson = new JSONObject();
+        JSONObject param = new JSONObject();
+        JSONArray algType = new JSONArray();
+        param.put("offset", 0);
+        param.put("size", 8);
+        inJson.put("param", param);
+        algType.put("access");
+        inJson.put("alg_type", algType);
+
+        MegDevice megDevice = SDKInitUnit.getDevice(sn,MegIntelliManager.getModuleName());
+        if(megDevice == null) {
+			res.put("status", 8);
+			res.put("outPut", "无设备连接或设备连接初始化失败");
+			return res;
+		}
+        int ret = MegIntelliManager.queryMonitor(megDevice, inJson.toString(), outJsonStr);
+        res.put("status", ret);
+        res.put("type", "query_person");
+        res.put("outPut", outJsonStr.toString());
+        
+        MegDevice megDevice2 = SDKInitUnit.getDevice(sn,MegDevRules.getModuleName());
+        if(megDevice2 == null) {
+			res.put("status2", 8);
+			res.put("outPut2", "无设备连接或设备连接初始化失败");
+			return res;
+		}
+        
+        JSONObject inJson3 = new JSONObject();
+
+        JSONObject calendarSchedule = new JSONObject();
+        JSONArray day = new JSONArray();
+        day.put("2:00-4:00");
+        day.put("10:00-12:00");
+        day.put("14:00-16:00");
+        calendarSchedule.put("1", day);
+        calendarSchedule.put("2", day);
+        calendarSchedule.put("3", day);
+        calendarSchedule.put("4", day);
+        inJson3.put("week_schedule", calendarSchedule);
+
+        inJson3.put("schedule_plan_id", "1234567890");
+        inJson3.put("schedule_plan_name", "schedule_plan_name1");
+        inJson3.put("schedule_plan_type", 1);
+        inJson3.put("app_type", 1);
+        inJson3.put("start_time", "20190101");
+        inJson3.put("end_time", "20190102");
+        int ret3 = MegDevRules.addSchedulePlan(megDevice2, inJson3.toString());
+        res.put("status3", ret3);
+        
+        StringBuilder outJsonStr2 = new StringBuilder();
+        JSONObject inJson2 = new JSONObject();
+
+        inJson2.put("offset", 0);
+        inJson2.put("size", 10);
+        inJson2.put("app_type", 0);
+        int ret2 = MegDevRules.querySchedulePlan(megDevice, inJson2.toString(), outJsonStr2);
+        res.put("status2", ret2);
+        res.put("outPut2", outJsonStr2.toString());
 		return res;
 		
 	}
