@@ -36,9 +36,81 @@ public class AccessController extends BaseController{
     	
     	return new ResponeResult(res);
     }
+    @RequestMapping(value = "/person/update")
+    public ResponeResult personUpdate(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.personUpdate(map);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/person/delete")
+    public ResponeResult personDelete(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.personDelete(map);
+    	
+    	return new ResponeResult(res);
+    }
     @RequestMapping(value = "/person/query")
     public ResponeResult personQuery(@RequestBody Map map) throws Exception{
     	Map<String, Object> res = sendService.personQuery(map);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/group/query")
+    public ResponeResult groupQuery(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.groupManager(map,3);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/group/add")
+    public ResponeResult groupAdd(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.groupManager(map,0);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/group/update")
+    public ResponeResult groupUpdate(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.groupManager(map,1);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/group/delete")
+    public ResponeResult groupDelete(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.groupManager(map,2);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/schedule/add")
+    public ResponeResult scheduleAdd(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.scheduleManager(map,0);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/schedule/update")
+    public ResponeResult scheduleUpdate(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.scheduleManager(map,1);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/schedule/delete")
+    public ResponeResult scheduleDelete(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.scheduleManager(map,2);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/schedule/query")
+    public ResponeResult scheduleQuery(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.scheduleManager(map,3);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/monitor/set")
+    public ResponeResult monitorSet(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.monitorManager(map,1);
+    	
+    	return new ResponeResult(res);
+    }
+    @RequestMapping(value = "/monitor/query")
+    public ResponeResult monitorQuery(@RequestBody Map map) throws Exception{
+    	Map<String, Object> res = sendService.monitorManager(map,3);
     	
     	return new ResponeResult(res);
     }
@@ -55,7 +127,7 @@ public class AccessController extends BaseController{
     	Map<String, Object> res = sendService.testGroup(map);
     	return new ResponeResult(res);
     }
-    @RequestMapping(value = "/sdk/initConnect")
+    @RequestMapping(value = "/device/initConnect")
     public ResponeResult initConnect() throws Exception{
     	Map<String, Object> map = sendService.initConnect();
     	return new ResponeResult(map);
