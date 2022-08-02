@@ -5,7 +5,8 @@ import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
 import lombok.extern.slf4j.Slf4j;
 
-import com.heqichao.springBootDemo.megprotocol.MegCommon.StreamCloseCb;
+import static com.heqichao.springBootDemo.megprotocol.MegCommon.StreamCloseCb;
+
 
 
 @Slf4j

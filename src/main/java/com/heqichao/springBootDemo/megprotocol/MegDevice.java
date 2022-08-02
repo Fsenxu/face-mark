@@ -2,38 +2,25 @@ package com.heqichao.springBootDemo.megprotocol;
 
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.PointerByReference;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 public class MegDevice {
+    @Getter
     private final String url;
-    private Boolean connected = false;//连接状态
     private final Map<String, PointerByReference> moduleTable = new HashMap<>();
+    private final AtomicBoolean inited = new AtomicBoolean();
 
     public MegDevice(String url) {
         this.url = url;
     }
-    
 
-    public String getUrl() {
-		return url;
-	}
-
-
-	public Boolean getConnected() {
-		return connected;
-	}
-
-
-	public void setConnected(Boolean connected) {
-		this.connected = connected;
-	}
-
-
-	private void registerModule(String moduleName) throws MegException {
+    private void registerModule(String moduleName) throws MegException {
         PointerByReference ppModule;
 
         try{
@@ -47,6 +34,11 @@ public class MegDevice {
     }
 
     public void init() throws MegException {
+        if (inited.get())
+        {
+            return;
+        }
+
         registerModule(MegDeviceAccess.getModuleName());
         registerModule(MegDeviceAlarm.getModuleName());
         registerModule(MegDeviceStorage.getModuleName());
@@ -63,19 +55,24 @@ public class MegDevice {
         registerModule(MegMediaPlayback.getModuleName());
         registerModule(MegFaceManager.getModuleName());
         registerModule(MegMediaSensor.getModuleName());
-    }
-    public void init(String moduleName) throws MegException {
-    	registerModule(moduleName);
+
+        inited.set(true);
     }
 
     public void deInit() throws MegException {
+        inited.set(false);
+
         for (Map.Entry<String, PointerByReference> entry : moduleTable.entrySet()) {
-            PointerByReference ppModule = entry.getValue();
-            ComponentFactory.destroyModule(MegDeviceAccess.getModuleName(), ppModule);
+            ComponentFactory.destroyModule(entry.getKey(), entry.getValue());
         }
     }
 
-    Pointer getModule(String moduleName) {
+    public Pointer getModule(String moduleName) {
+        if (!inited.get())
+        {
+            return null;
+        }
+
         PointerByReference ppModule = moduleTable.get(moduleName);
         if (ppModule == null)
         {
